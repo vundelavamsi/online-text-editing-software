@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- FabricJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/3.6.2/fabric.min.js"></script>
+    <style>
+        h1 {
+            color: green;
+        }
+
+        canvas {
+            border: 2px solid green;
+        }
+
+        .main-heading {
+            text-align: center; 
+        }
+
+        .controls {
+            margin-left: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-and-controls-container {
+            display: flex;
+            flex-direction: row;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="main-heading">Online Editing Software</h1>
+    <div class="main-container">
+        <div>
+            <button onclick="undo()">Undo</button>
+            <button onclick="redo()">Redo</button>
+        </div>
+        <div class="canvas-and-controls-container">
+            <canvas id="canvas" width="1000" height="600"></canvas>
+            <div class="controls">
+                <h3>Controls Panel</h3>
+                <label for="text">Text:</label>
+                <input type="text" id="text" value="Enter your text here"><br><br>
+    
+                <label for="fontSize">Font Size:</label>
+                <input type="number" id="fontSize" value="20"><br><br>
+    
+                <label for="fontFamily">Font Family:</label>
+                <select id="fontFamily">
+                    <option value="Arial">Arial</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                </select><br><br>
+    
+                <label for="color">Color:</label>
+                <input type="color" id="color" value="#000000"><br><br>
+    
+                <button onclick="addText()">Add Text</button>
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var canvas = new fabric.Canvas("canvas");
+        var undoStack = [];
+        var redoStack = [];
+
+        function addText() {
+            var textValue = document.getElementById("text").value;
+            var fontSize = parseInt(document.getElementById("fontSize").value);
+            var fontFamily = document.getElementById("fontFamily").value;
+            var color = document.getElementById("color").value;
+
+            var text = new fabric.Textbox(textValue, {
+                left: 50,
+                top: 50,
+                fontSize: fontSize,
+                fontFamily: fontFamily,
+                fill: color,
+                selectable: true
+            });
+
+            text.on('selected', function () {
+                document.getElementById("fontSize").value = text.fontSize;
+                document.getElementById("fontFamily").value = text.fontFamily;
+                document.getElementById("color").value = text.fill;
+            });
+
+            canvas.add(text);
+            recordState();
+        }
+
+        function recordState() {
+            var canvasState = JSON.stringify(canvas);
+            undoStack.push(canvasState);
+            redoStack.length = 0;
+        }
+
+        function undo() {
+            if (undoStack.length > 1) {
+                redoStack.push(undoStack.pop());
+                var lastState = JSON.parse(undoStack[undoStack.length - 1]);
+                canvas.clear().renderAll();
+                canvas.loadFromJSON(lastState, canvas.renderAll.bind(canvas));
+            }
+        }
+
+        function redo() {
+            if (redoStack.length > 0) {
+                var nextState = JSON.parse(redoStack.pop());
+                canvas.clear().renderAll();
+                canvas.loadFromJSON(nextState, canvas.renderAll.bind(canvas));
+                undoStack.push(JSON.stringify(nextState));
+            }
+        }
+
+        function updateText() {
+            var fontSize = parseInt(document.getElementById("fontSize").value);
+            var fontFamily = document.getElementById("fontFamily").value;
+            var color = document.getElementById("color").value;
+            var activeObject = canvas.getActiveObject();
+
+            if (activeObject && activeObject.type === 'textbox') {
+                activeObject.set({
+                    fontSize: fontSize,
+                    fontFamily: fontFamily,
+                    fill: color
+                });
+                canvas.renderAll();
+                recordState();
+            }
+        }
+
+        document.getElementById("fontSize").addEventListener('input', updateText);
+        document.getElementById("fontFamily").addEventListener('change', updateText);
+        document.getElementById("color").addEventListener('input', updateText);
+    </script>
+</body>
+
+</html>
